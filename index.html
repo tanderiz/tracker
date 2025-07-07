@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Clash Royale Tracker</title>
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#051b34" />
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('service-worker.js')
+        .then(() => console.log("✅ Service Worker registered"))
+        .catch(err => console.error("Service Worker error:", err));
+    }
+  </script>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      background-color: #051b34;
+      font-family: 'Segoe UI', sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      height: 100vh;
+    }
+    .container {
+      background-color: #1b1b1b;
+      width: 320px;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px #00000080;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      margin-top: 20px; /* Shifted downward */
+    }
+    .stats {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
+    .box {
+      width: 135px;
+      height: 58px;
+      border-radius: 10px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      border: 1px solid #ffffff20;
+    }
+    .wins-box {
+      background-color: #114b36;
+    }
+    .losses-box {
+      background-color: #5c1f24;
+    }
+    .label {
+      font-size: 11px;
+      font-weight: 600;
+      margin-bottom: 2px;
+      letter-spacing: 0.3px;
+    }
+    .stat-number {
+      font-size: 22px;
+      font-weight: bold;
+      color: white;
+    }
+    .wins-box .label {
+      color: #69ff9e;
+    }
+    .losses-box .label {
+      color: #ff8a8a;
+    }
+    .panel {
+      background-color: #2b2b2b;
+      border-radius: 12px;
+      padding: 16px 12px;
+      margin-bottom: 20px;
+    }
+    .winrate-header {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.4px;
+      color: #bbbbbb;
+      text-align: center;
+      margin-bottom: 8px;
+    }
+    .winrate-row {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    .winrate-value {
+      font-size: 28px;
+      font-weight: bold;
+      color: white;
+      margin-right: 12px;
+    }
+    .divider {
+      width: 1px;
+      height: 28px;
+      background-color: #555;
+      margin: 0 12px;
+    }
+    .record-inline {
+      display: flex;
+      flex-direction: column;
+      font-size: 11px;
+      font-weight: bold;
+      letter-spacing: 0.3px;
+      text-align: left;
+    }
+    .record-inline .w {
+      color: #69ff9e;
+    }
+    .record-inline .l {
+      color: #ff8a8a;
+      margin-top: 2px;
+    }
+    .last10-header {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding-bottom: 5px;
+      margin-bottom: 10px;
+      border-bottom: 1px solid #444;
+      gap: 8px;
+    }
+    .last10-title {
+      font-size: 11px;
+      font-weight: 600;
+      color: #ccc;
+      letter-spacing: 0.3px;
+    }
+    .streak {
+      font-size: 11px;
+      font-weight: bold;
+      color: #00ff88;
+    }
+    .last10 {
+      display: flex;
+      justify-content: space-between;
+      gap: 3px;
+      flex-direction: row-reverse;
+    }
+    .dot {
+      width: 22px;
+      height: 22px;
+      border-radius: 6px;
+      background-color: #555;
+    }
+    .dot.win {
+      background-color: #1bb655;
+    }
+    .dot.loss {
+      background-color: #e13030;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="stats">
+      <div class="box wins-box">
+        <div class="label">WINS</div>
+        <div class="stat-number" id="wins">0</div>
+      </div>
+      <div class="box losses-box">
+        <div class="label">LOSSES</div>
+        <div class="stat-number" id="losses">0</div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="winrate-header">WIN RATE</div>
+      <div class="winrate-row">
+        <div class="winrate-value" id="winrate">0%</div>
+        <div class="divider"></div>
+        <div class="record-inline">
+          <span class="w" id="recordW">0W</span>
+          <span class="l" id="recordL">0L</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="last10-header">
+        <div class="last10-title">LAST 10 GAMES</div>
+        <div class="divider" style="height: 12px; margin: 0 6px;"></div>
+        <div class="streak" id="streak">0 Win Streak</div>
+      </div>
+      <div class="last10" id="last10">
+        <div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div>
+        <div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let wins = 0;
+    let losses = 0;
+    let last10 = [];
+    let deleteMode = false;
+
+    function updateDisplay() {
+      document.getElementById('wins').textContent = wins;
+      document.getElementById('losses').textContent = losses;
+      document.getElementById('recordW').textContent = `${wins}W`;
+      document.getElementById('recordL').textContent = `${losses}L`;
+
+      const total = wins + losses;
+      const winRate = total > 0 ? ((wins / total) * 100).toFixed(1) : 0;
+      document.getElementById('winrate').textContent = `${winRate}%`;
+
+      const dots = document.querySelectorAll('.dot');
+      for (let i = 0; i < 10; i++) {
+        dots[i].className = 'dot';
+        if (last10[i]) dots[i].classList.add(last10[i]);
+      }
+
+      let streakType = last10[0];
+      let streakCount = 0;
+      for (let i = 0; i < last10.length; i++) {
+        if (last10[i] === streakType) streakCount++;
+        else break;
+      }
+
+      const streakText = document.getElementById('streak');
+      if (streakType === 'win') {
+        streakText.textContent = `${streakCount} Win Streak`;
+        streakText.style.color = '#00ff88';
+      } else if (streakType === 'loss') {
+        streakText.textContent = `${streakCount} Loss Streak`;
+        streakText.style.color = '#ff4444';
+      } else {
+        streakText.textContent = `0 Win Streak`;
+        streakText.style.color = '#888';
+      }
+    }
+
+    window.addEventListener('keydown', (e) => {
+      if (e.key.toLowerCase() === 'd') {
+        deleteMode = true;
+        return;
+      }
+
+      if (e.key.toLowerCase() === 'w') {
+        if (deleteMode && wins > 0) {
+          wins--;
+          const idx = last10.indexOf('win');
+          if (idx !== -1) last10.splice(idx, 1);
+        } else {
+          wins++;
+          last10.unshift('win');
+        }
+      } else if (e.key.toLowerCase() === 'l') {
+        if (deleteMode && losses > 0) {
+          losses--;
+          const idx = last10.indexOf('loss');
+          if (idx !== -1) last10.splice(idx, 1);
+        } else {
+          losses++;
+          last10.unshift('loss');
+        }
+      }
+
+      if (e.shiftKey && e.key.toLowerCase() === 'r') {
+        wins = 0;
+        losses = 0;
+        last10 = [];
+      }
+
+      if (last10.length > 10) last10 = last10.slice(0, 10);
+      updateDisplay();
+    });
+
+    window.addEventListener('keyup', (e) => {
+      if (e.key.toLowerCase() === 'd') {
+        deleteMode = false;
+      }
+    });
+
+    updateDisplay();
+  </script>
+</body>
+</html>
